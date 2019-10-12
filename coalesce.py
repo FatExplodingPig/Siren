@@ -5,12 +5,17 @@ from pydub import AudioSegment
 from ast import literal_eval as make_tuple
 import librosa
 
-x = np.zeros((0, 100, 100))
+def pad(arr):
+    if(arr.shape[1] > 1723):
+        return arr[:, 0:1723]
+    return np.repeat(arr, (math.ceil(1723/arr.shape[1])), axis = 1)[:, 0:1723]
+
+x = np.zeros((0, 40, 1723))
 z = np.zeros((0))
-y = np.zeros((0, 100, 100))
+y = np.zeros((0, 128, 1723))
 for i in range(8):
     direction = "./TrainingSets/UrbanSounds/UrbanSound/data/"
-    directory = os.fsencode(direction)
+    directory = Path(direction)
     category = ""
     if i == 0:
         category = "children_playing"
@@ -28,32 +33,37 @@ for i in range(8):
         category = "siren"
     elif i == 7:
         category = "car_horn"
-    directory = os.fsencode(direction + category)
+    directory = directory / category
+    # directory = os.fsencode(direction + category)
 
     for file in os.listdir(directory):
         filename = os.fsdecode(file)
         if filename.endswith(".wav"):
-            filenumber = int(filename[:-4])
-            audio, samplerate = librosa.load(filename)
-            mfccs = librosa.feature.mfcc(y=audio, sr=samplerate, n_mfcc=40)
-            mfccs.reshape()
+            audio, samplerate = librosa.load(directory / filename, sr=44100)
+            mfccs = librosa.feature.mfcc(y=audio, sr=samplerate, n_mfcc=40, hop_length=128, n_fft=512)
+            mfccs = pad(mfccs)
+            mfccs.reshape((1, 40, 1723))
             np.append(x, mfccs, axis=0)
             np.append(z, category)
-            spectogram = librosa.feature.melspectrogram(y=audio, sr = samplerate)
-            spectogram.reshape()
+            spectogram = librosa.feature.melspectrogram(y=audio, sr = samplerate, hop_length=128, n_fft=512)
+            spectogram = pad(spectogram)
+            spectogram.reshape((1, 128, 1723))
             np.append(y, spectorgram, axis = 0)
 
         if filename.endswith(".mp3"):
-            src = "filename"
-            sound = AudioSegment.from_mp3(src)
-            sound.export(dst, format="wav")
-            audio, samplerate = librosa.load(dst)
-            mfccs = librosa.feature.mfcc(y=audio, sr = samplerate, n_mfcc=40)
-            mfccs.reshape()
+            src = filename
+            sound = AudioSegment.from_mp3(directory / src)
+            dst = filename[:-4]+".wav"
+            sound.export(directory / dst, format="wav")
+            audio, samplerate = librosa.load(directory / dst)
+            mfccs = librosa.feature.mfcc(y=audio, sr=samplerate, n_mfcc=40, hop_length=128, n_fft=512)
+            mfccs = pad(mfccs)
+            mfccs.reshape((1, 40, 1723))
             np.append(x, mfccs, axis=0)
             np.append(z, category)
-            spectogram = librosa.feature.melspectrogram(y=audio, sr=samplerate)
-            spectogram.reshape()
+            spectogram = librosa.feature.melspectrogram(y=audio, sr=samplerate, hop_length=128, n_fft=512)
+            spectogram = pad(spectogram)
+            spectogram.reshape((1, 128, 1723))
             np.append(y, spectorgram, axis=0)
 
 with open("vectorsX.csv", "wb") as file:
