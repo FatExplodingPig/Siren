@@ -1,22 +1,34 @@
 import os
 import numpy as np
 import json
+from pydub import AudioSegment
 from ast import literal_eval as make_tuple
 
 directory = os.fsencode("./imgs")
-
-final = np.zeros((100000, 3))
+x = np.zeros((0, 100, 100))
+y = np.zeros((0))
+z = np.zeros((0, 100, 100))
 
 for file in os.listdir(directory):
-     filename = os.fsdecode(file)
-     if filename.endswith(".json"):
-         filenumber = int(filename[:-5])
-         if(filenumber <= 100000):
-             print(str(filenumber), end="\r")
-             with open("./imgs/"+filename) as file:
-                 text = file.read()
-                 vec = np.array(make_tuple(json.loads(text)['eye_details']['look_vec'])[0:3])
-                 final[filenumber-1] = vec
+
+    filename = os.fsdecode(file)
+    if filename.endswith(".wav"):
+        filenumber = int(filename[:-4])
+        audio, samplerate = librosa.load(filename)
+        mfccs = librosa.feature.mfcc(y=audio, sr=samplerate, n_mfcc=40)
+        mfccs.reshape()
+        np.append(x, mfccs, axis=0)
+
+    if filename.endswith(".mp3"):
+        src = "filename"
+        sound = AudioSegment.from_mp3(src)
+        sound.export(dst, format="wav")
+        audio, samplerate = librosa.load(dst)
+        mfccs = librosa.feature.mfcc(y=audio, sr = samplerate, n_mfcc=40)
+        mfccs.reshape()
+        np.append(x, mfccs, axis=0)
+
+
 
 with open("vectors.csv", "wb") as file:
     np.savetxt(file, final, delimiter=",")
